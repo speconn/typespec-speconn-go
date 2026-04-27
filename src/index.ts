@@ -392,7 +392,7 @@ function emitGo(program: Program, services: ServiceInfo[], outputDir: string): P
       } else {
         server.push(`func (Unimplemented${svc.serviceName}Handler) ${goExport(rpc.originalName)}(req *${reqName(rpc)}) (*${resName(rpc)}, error) {`);
       }
-      server.push(`\treturn speconn.NewError(speconn.CodeUnimplemented, "${svc.serviceFQN}.${goExport(rpc.originalName)} is not implemented")`);
+      server.push(`\treturn nil, speconn.NewError(speconn.CodeUnimplemented, "${svc.serviceFQN}.${goExport(rpc.originalName)} is not implemented")`);
       server.push('}\n');
     }
 
