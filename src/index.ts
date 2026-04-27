@@ -293,6 +293,7 @@ function emitGo(program: Program, services: ServiceInfo[], outputDir: string): P
   for (const svc of services) {
     if (svc.rpcs.length === 0) continue;
     const fn = fileNamesFor(svc.serviceName, "go");
+    const goExport = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
     const reqName = (rpc: RpcInfo) => rpc.inputType?.name || "struct{}";
     const resName = (rpc: RpcInfo) => rpc.outputType?.name || "struct{}";
 
@@ -313,7 +314,7 @@ function emitGo(program: Program, services: ServiceInfo[], outputDir: string): P
     }
     types.push(`const ${svc.serviceName}Name = "${svc.serviceFQN}"\n`);
     for (const rpc of svc.rpcs) {
-      types.push(`const ${svc.serviceName}${rpc.originalName}Procedure = "${rpc.path}"`);
+      types.push(`const ${svc.serviceName}${goExport(rpc.originalName)}Procedure = "${rpc.path}"`);
     }
     types.push('');
 
@@ -325,24 +326,24 @@ function emitGo(program: Program, services: ServiceInfo[], outputDir: string): P
     server.push(`type ${svc.serviceName}Handler interface {`);
     for (const rpc of svc.rpcs) {
       if (rpc.isStream) {
-        server.push(`\t${rpc.originalName}(req *${reqName(rpc)}, send func(*${resName(rpc)}) error) error`);
+        server.push(`\t${goExport(rpc.originalName)}(req *${reqName(rpc)}, send func(*${resName(rpc)}) error) error`);
       } else {
-        server.push(`\t${rpc.originalName}(req *${reqName(rpc)}) (*${resName(rpc)}, error)`);
+        server.push(`\t${goExport(rpc.originalName)}(req *${reqName(rpc)}) (*${resName(rpc)}, error)`);
       }
     }
     server.push('}\n');
     server.push(`func New${svc.serviceName}Handler(svc ${svc.serviceName}Handler) (string, http.Handler) {`);
     for (const rpc of svc.rpcs) {
       if (rpc.isStream) {
-        server.push(`\t${rpc.name}Handler := speconn.NewServerStreamHandler[${reqName(rpc)}, ${resName(rpc)}](${svc.serviceName}${rpc.originalName}Procedure, svc.${rpc.originalName})`);
+        server.push(`\t${rpc.name}Handler := speconn.NewServerStreamHandler[${reqName(rpc)}, ${resName(rpc)}](${svc.serviceName}${goExport(rpc.originalName)}Procedure, svc.${goExport(rpc.originalName)})`);
       } else {
-        server.push(`\t${rpc.name}Handler, _ := speconn.NewUnaryHandler[${reqName(rpc)}, ${resName(rpc)}](${svc.serviceName}${rpc.originalName}Procedure, svc.${rpc.originalName})`);
+        server.push(`\t${rpc.name}Handler, _ := speconn.NewUnaryHandler[${reqName(rpc)}, ${resName(rpc)}](${svc.serviceName}${goExport(rpc.originalName)}Procedure, svc.${goExport(rpc.originalName)})`);
       }
     }
     server.push(`\treturn "${svc.serviceFQN}/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {`);
     server.push(`\t\tswitch r.URL.Path {`);
     for (const rpc of svc.rpcs) {
-      server.push(`\t\tcase ${svc.serviceName}${rpc.originalName}Procedure:`);
+      server.push(`\t\tcase ${svc.serviceName}${goExport(rpc.originalName)}Procedure:`);
       server.push(`\t\t\t${rpc.name}Handler.ServeHTTP(w, r)`);
     }
     server.push(`\t\tdefault:`);
@@ -353,11 +354,11 @@ function emitGo(program: Program, services: ServiceInfo[], outputDir: string): P
     server.push(`type Unimplemented${svc.serviceName}Handler struct{}\n`);
     for (const rpc of svc.rpcs) {
       if (rpc.isStream) {
-        server.push(`func (Unimplemented${svc.serviceName}Handler) ${rpc.originalName}(req *${reqName(rpc)}, send func(*${resName(rpc)}) error) error {`);
+        server.push(`func (Unimplemented${svc.serviceName}Handler) ${goExport(rpc.originalName)}(req *${reqName(rpc)}, send func(*${resName(rpc)}) error) error {`);
       } else {
-        server.push(`func (Unimplemented${svc.serviceName}Handler) ${rpc.originalName}(req *${reqName(rpc)}) (*${resName(rpc)}, error) {`);
+        server.push(`func (Unimplemented${svc.serviceName}Handler) ${goExport(rpc.originalName)}(req *${reqName(rpc)}) (*${resName(rpc)}, error) {`);
       }
-      server.push(`\treturn speconn.NewError(speconn.CodeUnimplemented, "${svc.serviceFQN}.${rpc.originalName} is not implemented")`);
+      server.push(`\treturn speconn.NewError(speconn.CodeUnimplemented, "${svc.serviceFQN}.${goExport(rpc.originalName)} is not implemented")`);
       server.push('}\n');
     }
 
@@ -370,9 +371,9 @@ function emitGo(program: Program, services: ServiceInfo[], outputDir: string): P
     client.push(`type ${svc.serviceName}Client interface {`);
     for (const rpc of svc.rpcs) {
       if (rpc.isStream) {
-        client.push(`\t${rpc.originalName}(req *${reqName(rpc)}) (*speconn.ClientStream[${resName(rpc)}], error)`);
+        client.push(`\t${goExport(rpc.originalName)}(req *${reqName(rpc)}) (*speconn.ClientStream[${resName(rpc)}], error)`);
       } else {
-        client.push(`\t${rpc.originalName}(req *${reqName(rpc)}) (*${resName(rpc)}, error)`);
+        client.push(`\t${goExport(rpc.originalName)}(req *${reqName(rpc)}) (*${resName(rpc)}, error)`);
       }
     }
     client.push('}\n');
@@ -382,9 +383,9 @@ function emitGo(program: Program, services: ServiceInfo[], outputDir: string): P
     client.push(`\treturn &${privClient}{`);
     for (const rpc of svc.rpcs) {
       if (rpc.isStream) {
-        client.push(`\t\t${rpc.name}: speconn.NewStreamClient[${reqName(rpc)}, ${resName(rpc)}](httpClient, baseURL+${svc.serviceName}${rpc.originalName}Procedure),`);
+        client.push(`\t\t${rpc.name}: speconn.NewStreamClient[${reqName(rpc)}, ${resName(rpc)}](httpClient, baseURL+${svc.serviceName}${goExport(rpc.originalName)}Procedure),`);
       } else {
-        client.push(`\t\t${rpc.name}: speconn.NewClient[${reqName(rpc)}, ${resName(rpc)}](httpClient, baseURL+${svc.serviceName}${rpc.originalName}Procedure),`);
+        client.push(`\t\t${rpc.name}: speconn.NewClient[${reqName(rpc)}, ${resName(rpc)}](httpClient, baseURL+${svc.serviceName}${goExport(rpc.originalName)}Procedure),`);
       }
     }
     client.push(`\t}`);
@@ -400,10 +401,10 @@ function emitGo(program: Program, services: ServiceInfo[], outputDir: string): P
     client.push('}\n');
     for (const rpc of svc.rpcs) {
       if (rpc.isStream) {
-        client.push(`func (c *${privClient}) ${rpc.originalName}(req *${reqName(rpc)}) (*speconn.ClientStream[${resName(rpc)}], error) {`);
+        client.push(`func (c *${privClient}) ${goExport(rpc.originalName)}(req *${reqName(rpc)}) (*speconn.ClientStream[${resName(rpc)}], error) {`);
         client.push(`\treturn c.${rpc.name}.Call(req)`);
       } else {
-        client.push(`func (c *${privClient}) ${rpc.originalName}(req *${reqName(rpc)}) (*${resName(rpc)}, error) {`);
+        client.push(`func (c *${privClient}) ${goExport(rpc.originalName)}(req *${reqName(rpc)}) (*${resName(rpc)}, error) {`);
         client.push(`\treturn c.${rpc.name}.Call(req)`);
       }
       client.push('}\n');
