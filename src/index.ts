@@ -326,9 +326,9 @@ function emitGo(program: Program, services: ServiceInfo[], outputDir: string): P
     server.push(`type ${svc.serviceName}Handler interface {`);
     for (const rpc of svc.rpcs) {
       if (rpc.isStream) {
-        server.push(`\t${goExport(rpc.originalName)}(req *${reqName(rpc)}, send func(*${resName(rpc)}) error) error`);
+        server.push(`\t${goExport(rpc.originalName)}(ctx *speconn.SpeconnContext, req *${reqName(rpc)}, send func(*${resName(rpc)}) error) error`);
       } else {
-        server.push(`\t${goExport(rpc.originalName)}(req *${reqName(rpc)}) (*${resName(rpc)}, error)`);
+        server.push(`\t${goExport(rpc.originalName)}(ctx *speconn.SpeconnContext, req *${reqName(rpc)}) (*${resName(rpc)}, error)`);
       }
     }
     server.push('}\n');
@@ -338,19 +338,19 @@ function emitGo(program: Program, services: ServiceInfo[], outputDir: string): P
       const expName = goExport(rpc.originalName);
       const procConst = `${svc.serviceName}${expName}Procedure`;
       if (rpc.isStream) {
-        server.push(`\trouter.ServerStream(${procConst}, func(req any, send func(any)) {`);
+        server.push(`\trouter.ServerStream(${procConst}, func(ctx *speconn.SpeconnContext, req any, send func(any)) {`);
         server.push(`\t\ttypedSend := func(msg *${resName(rpc)}) error { send(msg); return nil }`);
         server.push(`\t\tjsonBytes, _ := json.Marshal(req)`);
         server.push(`\t\tvar typedReq ${reqName(rpc)}`);
         server.push(`\t\tjson.Unmarshal(jsonBytes, &typedReq)`);
-        server.push(`\t\tsvc.${expName}(&typedReq, typedSend)`);
+        server.push(`\t\tsvc.${expName}(ctx, &typedReq, typedSend)`);
         server.push(`\t})`);
       } else {
-        server.push(`\trouter.Unary(${procConst}, func(req any) (any, error) {`);
+        server.push(`\trouter.Unary(${procConst}, func(ctx *speconn.SpeconnContext, req any) (any, error) {`);
         server.push(`\t\tjsonBytes, _ := json.Marshal(req)`);
         server.push(`\t\tvar typedReq ${reqName(rpc)}`);
         server.push(`\t\tjson.Unmarshal(jsonBytes, &typedReq)`);
-        server.push(`\t\treturn svc.${expName}(&typedReq)`);
+        server.push(`\t\treturn svc.${expName}(ctx, &typedReq)`);
         server.push(`\t})`);
       }
     }
@@ -359,9 +359,9 @@ function emitGo(program: Program, services: ServiceInfo[], outputDir: string): P
     server.push(`type Unimplemented${svc.serviceName}Handler struct{}\n`);
     for (const rpc of svc.rpcs) {
       if (rpc.isStream) {
-        server.push(`func (Unimplemented${svc.serviceName}Handler) ${goExport(rpc.originalName)}(req *${reqName(rpc)}, send func(*${resName(rpc)}) error) error {`);
+        server.push(`func (Unimplemented${svc.serviceName}Handler) ${goExport(rpc.originalName)}(ctx *speconn.SpeconnContext, req *${reqName(rpc)}, send func(*${resName(rpc)}) error) error {`);
       } else {
-        server.push(`func (Unimplemented${svc.serviceName}Handler) ${goExport(rpc.originalName)}(req *${reqName(rpc)}) (*${resName(rpc)}, error) {`);
+        server.push(`func (Unimplemented${svc.serviceName}Handler) ${goExport(rpc.originalName)}(ctx *speconn.SpeconnContext, req *${reqName(rpc)}) (*${resName(rpc)}, error) {`);
       }
       server.push(`\treturn nil, speconn.NewError(speconn.CodeUnimplemented, "${svc.serviceFQN}.${goExport(rpc.originalName)} is not implemented")`);
       server.push('}\n');
