@@ -371,12 +371,12 @@ function emitGo(program: Program, services: ServiceInfo[], outputDir: string): P
     }
     client.push('}\n');
     const privClient = svc.serviceName.charAt(0).toLowerCase() + svc.serviceName.slice(1) + "Client";
-    client.push(`func New${svc.serviceName}Client(baseURL string) ${svc.serviceName}Client {`);
+    client.push(`func New${svc.serviceName}Client(httpClient speconn.HttpClient, baseURL string) ${svc.serviceName}Client {`);
     client.push(`\tbaseURL = strings.TrimRight(baseURL, "/")`);
     client.push(`\treturn &${privClient}{`);
     for (const rpc of svc.rpcs) {
       const procConst = `${svc.serviceName}${goExport(rpc.originalName)}Procedure`;
-      client.push(`\t\t${rpc.name}: speconn.NewClient[${reqName(rpc)}, ${resName(rpc)}](baseURL, ${procConst}),`);
+      client.push(`\t\t${rpc.name}: speconn.NewClientWithHttpClient[${reqName(rpc)}, ${resName(rpc)}](baseURL, ${procConst}, httpClient),`);
     }
     client.push(`\t}`);
     client.push('}\n');
