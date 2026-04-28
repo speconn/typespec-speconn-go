@@ -375,9 +375,9 @@ function emitGo(program: Program, services: ServiceInfo[], outputDir: string): P
     client.push(`type ${svc.serviceName}Client interface {`);
     for (const rpc of svc.rpcs) {
       if (rpc.isStream) {
-        client.push(`\t${goExport(rpc.originalName)}(req *${reqName(rpc)}) ([]${resName(rpc)}, error)`);
+        client.push(`\t${goExport(rpc.originalName)}(req *${reqName(rpc)}, opts ...speconn.CallOption) ([]${resName(rpc)}, error)`);
       } else {
-        client.push(`\t${goExport(rpc.originalName)}(req *${reqName(rpc)}) (*${resName(rpc)}, error)`);
+        client.push(`\t${goExport(rpc.originalName)}(req *${reqName(rpc)}, opts ...speconn.CallOption) (*${resName(rpc)}, error)`);
       }
     }
     client.push('}\n');
@@ -402,11 +402,11 @@ function emitGo(program: Program, services: ServiceInfo[], outputDir: string): P
     client.push('}\n');
     for (const rpc of svc.rpcs) {
       if (rpc.isStream) {
-        client.push(`func (c *${privClient}) ${goExport(rpc.originalName)}(req *${reqName(rpc)}) ([]${resName(rpc)}, error) {`);
-        client.push(`\treturn c.${rpc.name}.Stream(req)`);
+        client.push(`func (c *${privClient}) ${goExport(rpc.originalName)}(req *${reqName(rpc)}, opts ...speconn.CallOption) ([]${resName(rpc)}, error) {`);
+        client.push(`\treturn c.${rpc.name}.Stream(req, opts...)`);
       } else {
-        client.push(`func (c *${privClient}) ${goExport(rpc.originalName)}(req *${reqName(rpc)}) (*${resName(rpc)}, error) {`);
-        client.push(`\treturn c.${rpc.name}.Call(req)`);
+        client.push(`func (c *${privClient}) ${goExport(rpc.originalName)}(req *${reqName(rpc)}, opts ...speconn.CallOption) (*${resName(rpc)}, error) {`);
+        client.push(`\treturn c.${rpc.name}.Call(req, opts...)`);
       }
       client.push('}\n');
     }
